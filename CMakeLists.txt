@@ -1,10 +1,11 @@
-cmake_minimum_required (VERSION 2.8.12)
+cmake_minimum_required (VERSION 3.5.1)
 
 foreach(p
     CMP0048 # OK to clear PROJECT_VERSION on project()
     CMP0054 # CMake 3.1
     CMP0056 # export EXE_LINKER_FLAGS to try_run
     CMP0057 # Support no if() IN_LIST operator
+    CMP0063 # Honor visibility properties for all targets
     )
   if(POLICY ${p})
     cmake_policy(SET ${p} NEW)
@@ -183,6 +184,10 @@ else()
     add_definitions(-D_GNU_SOURCE=1)
   endif()
 
+  if (QNXNTO)
+    add_definitions(-D_QNX_SOURCE)
+  endif()
+
   # Link time optimisation
   if (BENCHMARK_ENABLE_LTO)
     add_cxx_compiler_flag(-flto)
@@ -251,6 +256,7 @@ if (NOT BENCHMARK_ENABLE_EXCEPTIONS AND HAVE_STD_REGEX
 endif()
 cxx_feature_check(STEADY_CLOCK)
 # Ensure we have pthreads
+set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 # Set up directories
@@ -261,8 +267,10 @@ add_subdirectory(src)
 
 if (BENCHMARK_ENABLE_TESTING)
   enable_testing()
-  if (BENCHMARK_ENABLE_GTEST_TESTS)
-    include(HandleGTest)
+  if (BENCHMARK_ENABLE_GTEST_TESTS AND
+      NOT (TARGET gtest AND TARGET gtest_main AND
+           TARGET gmock AND TARGET gmock_main))
+    include(GoogleTest)
   endif()
   add_subdirectory(test)
 endif()
